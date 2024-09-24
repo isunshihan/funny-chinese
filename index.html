@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汉语新解</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .svg-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+        }
+        .svg-container svg {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl">
+        <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">汉语新解</h1>
+        <div class="mb-4">
+            <input id="messageInput" type="text" placeholder="Enter your message here" 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button id="sendButton" 
+                class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition duration-300">
+            发送
+        </button>
+        <div id="responseArea" class="mt-6 p-4 bg-gray-50 rounded-md hidden">
+            <div id="responseContent" class="text-gray-600 svg-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const responseArea = document.getElementById('responseArea');
+        const responseContent = document.getElementById('responseContent');
+
+        sendButton.addEventListener('click', async () => {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            try {
+                sendButton.disabled = true;
+                sendButton.textContent = '发送中...';
+
+                const response = await fetch('http://localhost:3000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                
+                // 解析 response 字符串
+                const htmlContent = extractHtmlContent(data.response);
+
+                // 渲染 HTML 内容
+                if (htmlContent) {
+                    responseContent.innerHTML = htmlContent;
+                } else {
+                    responseContent.textContent = '没有找到可渲染的内容。';
+                }
+
+                responseArea.classList.remove('hidden');
+            } catch (error) {
+                console.error('Error:', error);
+                responseContent.textContent = 'An error occurred while fetching the response.';
+                responseArea.classList.remove('hidden');
+            } finally {
+                sendButton.disabled = false;
+                sendButton.textContent = '发送';
+            }
+        });
+
+        function extractHtmlContent(response) {
+            const match = response.match(/```html\s*([\s\S]*?)```/);
+            return match ? match[1].trim() : null;
+        }
+    </script>
+</body>
+</html>
